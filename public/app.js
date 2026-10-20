@@ -400,7 +400,7 @@ const imageProbe = (url, timeout = 6000) =>
 async function checkTarget(target, item) {
   const cell = item.querySelector(".ms");
   // The icon first: content blockers and CORP reject far fewer image loads than fetches.
-  let reachable = await imageProbe(target.url);
+  let reachable = await imageProbe(target.check ?? target.url);
   for (let i = 0; i < 3 && !reachable; i++) reachable = (await probeOnce(target.url)) !== null;
   // Never ask the server: its route is not the visitor's. Unknown stays unknown.
   cell.innerHTML = statusBadge(reachable ? true : null);

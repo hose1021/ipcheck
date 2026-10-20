@@ -84,7 +84,9 @@ switches to static mode on its own:
   turbo.az instead. Social, AI and gaming sites only need a yes/no answer: three
   browser attempts, then a favicon load for hosts whose `CORP: same-origin`
   hides the response. The server is never asked — its route is not the
-  visitor's — so a host that blocks both stays a grey dash.
+  visitor's — so a host that blocks both stays a grey . claude.ai locks every
+  own asset with , so its row checks the favicon of
+  anthropic.com through the  field in .
 - `/split-tunnel` reports two things per site: the exit IP, taken from the
   site's own `/cdn-cgi/trace`, and reachability, from a plain request to the
   origin. Sites without that path (alibaba.com, 163.com, bytedance.com,

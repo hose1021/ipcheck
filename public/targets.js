@@ -29,7 +29,7 @@ export const TARGETS = [
   { group: "games", name: "www.gog.com", url: "https://www.gog.com/" },
   { group: "games", name: "www.playstation.com", url: "https://www.playstation.com/" },
   { group: "ai", name: "chatgpt.com", url: "https://chatgpt.com/" },
-  { group: "ai", name: "claude.ai", url: "https://claude.ai/" },
+  { group: "ai", name: "claude.ai", url: "https://claude.ai/", check: "https://www.anthropic.com/favicon.ico" },
   { group: "ai", name: "gemini.google.com", url: "https://gemini.google.com/" },
   { group: "ai", name: "grok.com", url: "https://grok.com/" },
   { group: "ai", name: "www.perplexity.ai", url: "https://www.perplexity.ai/" },
