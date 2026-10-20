@@ -403,24 +403,11 @@ async function checkTarget(target, item) {
   const cell = item.querySelector(".ms");
   let reachable = false;
   for (let i = 0; i < 3 && !reachable; i++) reachable = (await probeOnce(target.url)) !== null;
-  // CORP-protected pages reject fetch but often still serve their icon.
+  // A page cannot see CORP-protected responses, but it often still gets the icon.
   if (!reachable) reachable = await imageProbe(target.url);
-  if (!reachable) {
-    // Some hosts send CORP: same-origin, so the page never sees a response.
-    if (!HAS_API) {
-      cell.innerHTML = statusBadge(null);
-      cell.dataset.state = "fail";
-      return;
-    }
-    try {
-      const [row] = await (await fetch(`/api/available?names=${encodeURIComponent(target.name)}`)).json();
-      reachable = Boolean(row?.ok);
-    } catch {
-      /* stays false */
-    }
-  }
-  cell.innerHTML = statusBadge(reachable);
-  cell.dataset.state = reachable ? "l90" : "down";
+  // Never ask the server: its route is not the visitor's. Unknown stays unknown.
+  cell.innerHTML = statusBadge(reachable ? true : null);
+  cell.dataset.state = reachable ? "l90" : "fail";
 }
 
 async function measureAll() {

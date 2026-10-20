@@ -133,24 +133,6 @@ const SOURCES = [
 ];
 
 
-// Fallback for hosts whose CORP header blocks a page-side check.
-async function serverReachable(url: string): Promise<boolean> {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      await fetch(url, {
-        redirect: "follow",
-        cache: "no-store",
-        signal: AbortSignal.timeout(7000),
-        headers: { "user-agent": "ipcheck/1.0" },
-      });
-      return true;
-    } catch {
-      /* try again */
-    }
-  }
-  return false;
-}
-
 export function clientIp(req: Request): string | null {
   const h = req.headers;
   const raw = h.get("cf-connecting-ip") ?? h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0];
@@ -499,17 +481,6 @@ export function createServer(port = PORT) {
 
       if (url.pathname === "/api/targets") {
         return Response.json(TARGETS, { headers: { "cache-control": "no-store" } });
-      }
-
-      if (url.pathname === "/api/available") {
-        const names = (url.searchParams.get("names") ?? "").split(",").filter(Boolean).slice(0, 40);
-        const results = await Promise.all(
-          names.map(async (name) => {
-            const target = TARGETS.find((x) => x.name === name);
-            return { name, ok: target ? await serverReachable(target.url) : false };
-          }),
-        );
-        return Response.json(results);
       }
 
       if (url.pathname === "/api/cdn") {
