@@ -26,6 +26,10 @@ Any static file server works: the site is the `public/` folder.
   live average. Bands: under 90, 150, 250 ms and slower.
 - **Availability** — social, AI and gaming sites get three attempts and a round
   badge. These groups show no timings: the question there is reachable or not.
+- **Split tunnel** — six CORS-enabled echo services answer with the address they
+  see; unequal answers mean the traffic leaves through more than one route.
+- **Multi-exit** — the same replies grouped by address, with the services that
+  reported each one.
 - **STUN** — one WebRTC data channel per server; the table shows the address the
   server sees, which is the UDP path and can differ from HTTP.
 
@@ -45,8 +49,8 @@ serve.ts            local static preview
 - A page cannot read a cross-origin response without CORS, and cannot see
   `Cross-Origin-Resource-Policy`-protected ones at all. Hosts such as
   `instagram.com`, `x.com` or `claude.ai` send `CORP: same-origin`, so their
-  availability is shown as a grey dash — honest "cannot tell" instead of a false
-  green mark.
+  availability falls back to an image probe, and when even that is blocked the
+  row shows a grey dash — honest "cannot tell" instead of a false verdict.
 - Some hosts hide behind redirect loops or block the request (`apa.az` sends
   `CORP: same-site`), which is why the latency list holds `turbo.az`.
 - Latency here is the browser's round trip, not ICMP ping: DNS, TLS and HTTP

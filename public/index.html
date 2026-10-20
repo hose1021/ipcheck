@@ -27,6 +27,8 @@
 
     <nav class="tabs" aria-label="Tools">
       <a href="#/" data-i18n="navHome">Мой IP</a>
+      <a href="#/split-tunnel" data-i18n="navSplit">Сплит-туннель</a>
+      <a href="#/multi" data-i18n="navMulti">Мульти-выход</a>
       <a href="#/stun" data-i18n="navStun">STUN</a>
     </nav>
 
@@ -91,6 +93,40 @@
           <ul id="latency-ai" class="ping" data-cols="3"></ul>
           <h3 class="group" data-i18n="groupGames">Игры</h3>
           <ul id="latency-games" class="ping" data-cols="4"></ul>
+        </div>
+      </section>
+
+      <section data-view="split" hidden>
+        <div class="intro">
+          <h1 data-i18n="splitTitle">Сплит-туннель</h1>
+          <p data-i18n="splitHint"></p>
+        </div>
+        <div class="card">
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="splitService">Сервис</th>
+                  <th data-i18n="ip">IP-адрес</th>
+                  <th data-i18n="country">Страна</th>
+                  <th data-i18n="city">Город</th>
+                </tr>
+              </thead>
+              <tbody id="split-body"></tbody>
+            </table>
+          </div>
+          <p><button type="button" id="split-run" class="ghost" data-i18n="splitRun">Проверить снова</button></p>
+        </div>
+      </section>
+
+      <section data-view="multi" hidden>
+        <div class="intro">
+          <h1 data-i18n="multiTitle">Мульти-выход</h1>
+          <p data-i18n="multiHint"></p>
+        </div>
+        <div class="card">
+          <ul id="multi-list" class="tree"></ul>
+          <p><button type="button" id="multi-run" class="ghost" data-i18n="splitRun">Проверить снова</button></p>
         </div>
       </section>
 

@@ -62,7 +62,7 @@ let lang = localStorage.getItem(STORE_LANG);
 if (!LANGS.includes(lang)) lang = "ru";
 
 const state = { ip: null, data: null, view: "home", homeReady: false };
-const started = { stun: false };
+const started = { split: false, multi: false, stun: false };
 
 const esc = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -131,7 +131,7 @@ function applyLanguage() {
   for (const el of $$("[data-i18n]")) el.textContent = t(lang, el.dataset.i18n);
   $("#q").placeholder = t(lang, "placeholder");
   for (const b of $$("[data-lang]")) b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
-  document.title = `${t(lang, state.view === "stun" ? "stunTitle" : "title")} · ipcheck`;
+  document.title = `${t(lang, state.view === "split" ? "splitTitle" : state.view === "multi" ? "multiTitle" : state.view === "stun" ? "stunTitle" : "title")} · ipcheck`;
   setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light", false);
   if (state.data) render(state.data);
 }
@@ -328,13 +328,30 @@ async function measureTarget(target, item) {
   }
 }
 
+const imageProbe = (url, timeout = 6000) =>
+  new Promise((resolve) => {
+    const img = new Image();
+    const timer = setTimeout(() => resolve(false), timeout);
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      resolve(false);
+    };
+    img.src = `${new URL(url).origin}/favicon.ico?_=${Date.now()}${Math.random()}`;
+  });
+
 async function checkTarget(target, item) {
   const cell = item.querySelector(".ms");
   let reachable = false;
   for (let i = 0; i < AVAILABILITY_RUNS && !reachable; i++) reachable = (await probeOnce(target.url)) !== null;
-  // CORP-protected hosts never expose the response, so the result is unknown.
+  // CORP-protected pages reject fetch but often still serve their icon.
+  if (!reachable) reachable = await imageProbe(target.url);
+  // Never claim a site is down: both probes failing only means the page cannot see it.
   cell.innerHTML = statusBadge(reachable ? true : null);
-  cell.dataset.state = reachable ? "l90" : "fail";
+  cell.dataset.state = reachable ? "l90" : "down";
 }
 
 async function measureAll() {
@@ -414,9 +431,81 @@ async function runStun() {
   );
 }
 
+/* ---------- exit addresses (split tunnel, multi-exit) ---------- */
+
+const ECHO_SERVICES = [
+  ["ipify.org", "https://api.ipify.org?format=json"],
+  ["ipwho.is", "https://ipwho.is/"],
+  ["ip.sb", "https://api.ip.sb/geoip"],
+  ["ipapi.is", "https://api.ipapi.is/"],
+  ["ipinfo.io", "https://ipinfo.io/json"],
+  ["ipapi.co", "https://ipapi.co/json/"],
+];
+
+async function collectExits() {
+  const rows = await Promise.all(
+    ECHO_SERVICES.map(async ([name, url]) => {
+      try {
+        const j = await fetchJson(`${url}${url.includes("?") ? "&" : "?"}_=${Date.now()}${Math.random()}`);
+        return { name, ip: typeof j?.ip === "string" ? j.ip : null };
+      } catch {
+        return { name, ip: null };
+      }
+    }),
+  );
+  await Promise.all(
+    rows.map(async (row) => {
+      if (row.ip) row.geo = await geoOf(row.ip);
+    }),
+  );
+  return rows;
+}
+
+async function runSplit() {
+  const body = $("#split-body");
+  body.innerHTML = ECHO_SERVICES.map(([name]) => cells([name, "…", "", ""])).join("");
+  const rows = await collectExits();
+  body.innerHTML = rows
+    .map((row) =>
+      row.ip
+        ? cells([row.name, row.ip, row.geo?.country ?? "", row.geo?.city ?? ""])
+        : cells([row.name, t(lang, "failed"), "", ""], "bad"),
+    )
+    .join("");
+}
+
+async function runMulti() {
+  const list = $("#multi-list");
+  list.innerHTML = `<li class="node">${t(lang, "loading")}</li>`;
+  const groups = new Map();
+  for (const row of await collectExits()) {
+    if (!row.ip) continue;
+    const group = groups.get(row.ip) ?? { ip: row.ip, country: row.geo?.country, city: row.geo?.city, services: [] };
+    group.services.push(row.name);
+    groups.set(row.ip, group);
+  }
+  const unique = [...groups.values()].sort((a, b) => b.services.length - a.services.length);
+  if (!unique.length) {
+    list.innerHTML = `<li class="node">${t(lang, "failed")}</li>`;
+    return;
+  }
+  list.innerHTML = unique
+    .map(
+      (g) =>
+        `<li class="node"><div class="row"><span class="main"><span class="title">${esc(g.ip)}</span><span class="sub">${esc(
+          [g.country, g.city].filter(Boolean).join(" · "),
+        )}</span></span><span class="summary">${g.services.length}</span></div><div class="children">${g.services
+          .map((s) => `<span class="chip">${esc(s)}</span>`)
+          .join("")}</div></li>`,
+    )
+    .join("");
+}
+
 /* ---------- router ---------- */
 
-const VIEW_OF_PATH = { "/": "home", "/stun": "stun" };
+const VIEW_OF_PATH = { "/": "home", "/split-tunnel": "split", "/multi": "multi", "/stun": "stun" };
+const TITLE_OF_VIEW = { home: "title", split: "splitTitle", multi: "multiTitle", stun: "stunTitle" };
+const VIEW_LOADERS = { split: runSplit, multi: runMulti, stun: runStun };
 
 const currentPath = () => {
   const hash = location.hash.replace(/^#\/?/, "");
@@ -427,15 +516,15 @@ function route() {
   const path = currentPath();
   const view = VIEW_OF_PATH[path] ?? "home";
   state.view = view;
-  document.title = `${t(lang, view === "stun" ? "stunTitle" : "title")} · ipcheck`;
+  document.title = `${t(lang, TITLE_OF_VIEW[view])} · ipcheck`;
   for (const section of $$("[data-view]")) section.hidden = section.dataset.view !== view;
   for (const link of $$(".tabs a")) {
     link.classList.toggle("active", link.getAttribute("href") === `#${path}`);
   }
   if (view === "home") initHome();
-  else if (!started.stun) {
-    started.stun = true;
-    runStun();
+  else if (!started[view]) {
+    started[view] = true;
+    VIEW_LOADERS[view]();
   }
   window.scrollTo(0, 0);
 }
@@ -479,6 +568,9 @@ $("#reset").addEventListener("click", async () => {
   const ip = await detectIp();
   if (ip) lookup(ip);
 });
+
+$("#split-run").addEventListener("click", runSplit);
+$("#multi-run").addEventListener("click", runMulti);
 
 $("#theme").addEventListener("click", () => {
   setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true);

@@ -3,5 +3,6 @@
   "private": true,
   "scripts": {
     "start": "bun run serve.ts"
-  }
+  },
+  "type": "module"
 }
