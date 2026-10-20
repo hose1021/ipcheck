@@ -378,11 +378,9 @@ async function measureTarget(target, item) {
 }
 
 const statusBadge = (ok) =>
-  `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"${
-    ok === null ? ' opacity=".35"' : ""
-  }/><path d="${
-    ok === null ? "M9 12h6" : ok ? "M7.8 12.4l2.7 2.7 5.7-6.1" : "M9 9l6 6M15 9l-6 6"
-  }" fill="none" stroke="var(--card)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  ok === null
+    ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".45"/><text x="12" y="16.5" text-anchor="middle" font-size="12" font-weight="700" fill="var(--card)">?</text></svg>'
+    : '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M7.8 12.4l2.7 2.7 5.7-6.1" fill="none" stroke="var(--card)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 const imageProbe = (url, timeout = 6000) =>
   new Promise((resolve) => {
@@ -401,13 +399,13 @@ const imageProbe = (url, timeout = 6000) =>
 
 async function checkTarget(target, item) {
   const cell = item.querySelector(".ms");
-  let reachable = false;
+  // The icon first: content blockers and CORP reject far fewer image loads than fetches.
+  let reachable = await imageProbe(target.url);
   for (let i = 0; i < 3 && !reachable; i++) reachable = (await probeOnce(target.url)) !== null;
-  // A page cannot see CORP-protected responses, but it often still gets the icon.
-  if (!reachable) reachable = await imageProbe(target.url);
   // Never ask the server: its route is not the visitor's. Unknown stays unknown.
   cell.innerHTML = statusBadge(reachable ? true : null);
   cell.dataset.state = reachable ? "l90" : "fail";
+  cell.title = reachable ? "" : t(lang, "checkUnknown");
 }
 
 async function measureAll() {
