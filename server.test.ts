@@ -1,34 +1,36 @@
 import { describe, expect, test } from "bun:test";
-import { clientIp, edgeNode, parseIpApi, parseIpwhois } from "./server.ts";
+import { clientIp, edgeNode, parseIpapi, parseIpwhois, rateLimit } from "./server.ts";
 
 describe("provider normalization", () => {
-  test("ip-api.com fields map to the shared shape", () => {
-    const out = parseIpApi({
-      status: "success",
-      query: "37.61.119.92",
-      country: "Azerbaijan",
-      countryCode: "AZ",
-      regionName: "Baki",
-      city: "Baku",
-      isp: "Aztelekom LLC",
-      org: "Aztelekom LLC",
-      as: "AS28787 Aztelekom LLC",
-      timezone: "Asia/Baku",
-      lat: 40.37767,
-      lon: 49.89201,
+  test("ipapi.is fields map to the shared shape", () => {
+    const out = parseIpapi({
+      ip: "8.8.8.8",
+      is_bogon: false,
+      company: "Google LLC",
+      asn: "AS15169 Google LLC",
+      city: "Mountain View",
+      region: "California",
+      country: "United States",
+      lat: 37.38605,
+      lon: -122.08385,
+      timezone: "America/Los_Angeles",
     });
 
     expect(out).toMatchObject({
-      ip: "37.61.119.92",
-      countryCode: "AZ",
-      region: "Baki",
-      city: "Baku",
-      asn: "28787",
+      ip: "8.8.8.8",
+      country: "United States",
+      region: "California",
+      city: "Mountain View",
+      isp: "Google LLC",
+      asn: "15169",
+      timezone: "America/Los_Angeles",
     });
   });
 
-  test("ip-api.com failure status throws its message", () => {
-    expect(() => parseIpApi({ status: "fail", message: "private range" })).toThrow("private range");
+  test("ipapi.is rejects an error envelope", () => {
+    expect(() => parseIpapi({ error: "Invalid IP Address or AS Number" })).toThrow(
+      "Invalid IP Address or AS Number",
+    );
   });
 
   test("ipwho.is nests connection and timezone", () => {
@@ -77,6 +79,40 @@ describe("edgeNode", () => {
 
   test("Bunny keeps its edge id in the server banner", () => {
     expect(probe({ server: "BunnyCDN-AZ1-1530" })).toEqual({ node: "AZ1-1530", via: "server" });
+  });
+});
+
+describe("rateLimit", () => {
+  test("allows requests up to the window limit", () => {
+    for (let i = 0; i < 5; i++) expect(rateLimit("1.1.1.1", 1000 + i)).toBe(true);
+  });
+
+  test("blocks requests over the window limit", () => {
+    const t0 = 2000;
+    for (let i = 0; i < 5; i++) rateLimit("2.2.2.2", t0 + i, 5);
+    expect(rateLimit("2.2.2.2", t0 + 5, 5)).toBe(false);
+  });
+
+  test("resets the counter after the window elapses", () => {
+    const t0 = 3000;
+    for (let i = 0; i < 5; i++) rateLimit("3.3.3.3", t0 + i);
+    expect(rateLimit("3.3.3.3", t0 + 60_001)).toBe(true);
+  });
+
+  test("tracks keys independently", () => {
+    const t0 = 4000;
+    for (let i = 0; i < 5; i++) rateLimit("4.4.4.4", t0 + i);
+    expect(rateLimit("5.5.5.5", t0)).toBe(true);
+  });
+
+  test("drops the oldest key once the tracker is at capacity", () => {
+    const hits = new Map();
+    const t0 = 6000;
+    for (let i = 0; i < 5; i++) rateLimit("10.0.0.1", t0 + i, 5, 60_000, 2, hits);
+    expect(rateLimit("10.0.0.1", t0 + 5, 5, 60_000, 2, hits)).toBe(false);
+    rateLimit("10.0.0.2", t0 + 6, 5, 60_000, 2, hits);
+    rateLimit("10.0.0.3", t0 + 7, 5, 60_000, 2, hits);
+    expect(rateLimit("10.0.0.1", t0 + 8, 5, 60_000, 2, hits)).toBe(true);
   });
 });
 

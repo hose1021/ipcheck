@@ -16,59 +16,60 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%234fd1a5%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="./style.css" />
   </head>
-  <body>
-    <header class="bar">
-      <a class="brand" href="/" data-route>ipcheck</a>
-      <nav class="langs" aria-label="Language">
-        <button type="button" id="theme" class="theme">☾</button>
-        <button type="button" data-lang="ru">RU</button>
-        <button type="button" data-lang="az">AZ</button>
+  <body class="m-0 bg-bg px-5 pb-12 font-sans text-[15px] leading-[1.55] text-fg">
+    <header class="mx-auto flex max-w-[720px] items-center justify-between pt-[18px] pb-2.5">
+      <a class="font-[650] tracking-[-0.01em] text-inherit no-underline" href="/" data-route>ipcheck</a>
+      <nav class="flex gap-1" aria-label="Language">
+        <button type="button" id="theme" class="cursor-pointer rounded-md border border-line bg-transparent px-2 py-[3px] text-[13px] leading-none text-muted">☾</button>
+        <button type="button" data-lang="ru" class="cursor-pointer rounded-md border border-line bg-transparent px-[9px] py-[3px] text-xs text-muted aria-pressed:border-current aria-pressed:text-fg">RU</button>
+        <button type="button" data-lang="az" class="cursor-pointer rounded-md border border-line bg-transparent px-[9px] py-[3px] text-xs text-muted aria-pressed:border-current aria-pressed:text-fg">AZ</button>
+        <button type="button" data-lang="en" class="cursor-pointer rounded-md border border-line bg-transparent px-[9px] py-[3px] text-xs text-muted aria-pressed:border-current aria-pressed:text-fg">EN</button>
       </nav>
     </header>
 
-    <nav class="tabs" aria-label="Tools">
-      <a href="/" data-route data-i18n="navHome">Мой IP</a>
-      <a href="/split-tunnel" data-route data-server data-i18n="navSplit">Сплит-туннель</a>
-      <a href="/multi" data-route data-server data-i18n="navMulti">Мульти-выход</a>
-      <a href="/cdn-node-lookup" data-route data-server data-i18n="navCdn">Узлы CDN</a>
-      <a href="/dns-exit-lookup" data-route data-server data-i18n="navDns">DNS-выход</a>
-      <a href="/stun" data-route data-i18n="navStun">STUN</a>
+    <nav class="tabs mx-auto mb-[22px] flex max-w-[720px] justify-center gap-0.5 overflow-x-auto border-b border-line [scrollbar-width:none]" aria-label="Tools">
+      <a class="-mb-px whitespace-nowrap border-b-2 border-transparent px-3 pt-2 pb-[9px] text-[13px] text-muted no-underline hover:text-fg aria-[current=page]:border-accent aria-[current=page]:text-fg" href="/" data-route data-i18n="navHome">Мой IP</a>
+      <a class="-mb-px whitespace-nowrap border-b-2 border-transparent px-3 pt-2 pb-[9px] text-[13px] text-muted no-underline hover:text-fg aria-[current=page]:border-accent aria-[current=page]:text-fg" href="/split-tunnel" data-route data-server data-i18n="navSplit">Сплит-туннель</a>
+      <a class="-mb-px whitespace-nowrap border-b-2 border-transparent px-3 pt-2 pb-[9px] text-[13px] text-muted no-underline hover:text-fg aria-[current=page]:border-accent aria-[current=page]:text-fg" href="/multi" data-route data-i18n="navMulti">Мульти-выход</a>
+      <a class="-mb-px whitespace-nowrap border-b-2 border-transparent px-3 pt-2 pb-[9px] text-[13px] text-muted no-underline hover:text-fg aria-[current=page]:border-accent aria-[current=page]:text-fg" href="/cdn-node-lookup" data-route data-i18n="navCdn">Узлы CDN</a>
+      <a class="-mb-px whitespace-nowrap border-b-2 border-transparent px-3 pt-2 pb-[9px] text-[13px] text-muted no-underline hover:text-fg aria-[current=page]:border-accent aria-[current=page]:text-fg" href="/dns-exit-lookup" data-route data-i18n="navDns">DNS-выход</a>
+      <a class="-mb-px whitespace-nowrap border-b-2 border-transparent px-3 pt-2 pb-[9px] text-[13px] text-muted no-underline hover:text-fg aria-[current=page]:border-accent aria-[current=page]:text-fg" href="/stun" data-route data-i18n="navStun">STUN</a>
     </nav>
 
-    <main>
+    <main class="mx-auto max-w-[720px]">
       <section data-view="home">
-        <div class="intro">
-          <h1 data-i18n="title">Мой IP-адрес</h1>
-          <p data-i18n="subtitle"></p>
+        <div>
+          <h1 class="mt-[18px] mb-1.5 text-[26px] tracking-[-0.02em]" data-i18n="title">Мой IP-адрес</h1>
+          <p class="m-0 mb-[18px] max-w-[54ch] text-muted" data-i18n="subtitle"></p>
         </div>
 
-        <div class="card">
-          <div class="ip-line">
-            <output id="ip" class="ip">…</output>
-            <button type="button" id="copy" class="ghost" data-i18n="copy">Копировать</button>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]">
+          <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <output id="ip" class="break-all font-mono text-[30px] font-semibold leading-[1.15] tracking-[-0.02em]">…</output>
+            <button type="button" id="copy" class="cursor-pointer rounded-[7px] border border-line bg-transparent px-[11px] py-1.5 text-[13px] text-fg" data-i18n="copy">Копировать</button>
           </div>
-          <dl id="facts" class="facts"></dl>
-          <form id="lookup" class="lookup" autocomplete="off">
-            <label for="q" data-i18n="queryTitle">Проверить другой IP</label>
-            <div class="row">
-              <input id="q" name="q" inputmode="decimal" spellcheck="false" placeholder="8.8.8.8" />
-              <button type="submit" data-i18n="check">Проверить</button>
-              <button type="button" id="reset" class="ghost" data-i18n="reset">Мой IP</button>
+          <dl id="facts" class="mt-[18px] mb-1 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-[18px] gap-y-3"></dl>
+          <form id="lookup" class="mt-[18px] border-t border-line pt-4" autocomplete="off">
+            <label for="q" class="mb-2 block text-xs uppercase tracking-[0.06em] text-muted" data-i18n="queryTitle">Проверить другой IP</label>
+            <div class="flex flex-wrap gap-2">
+              <input id="q" name="q" class="min-w-0 flex-1 basis-[180px] rounded-[7px] border border-line bg-bg px-[11px] py-[7px] font-[inherit] text-fg tabular-nums" inputmode="decimal" spellcheck="false" placeholder="8.8.8.8" />
+              <button type="submit" class="cursor-pointer rounded-[7px] border border-accent bg-transparent px-[11px] py-1.5 text-[13px] text-accent" data-i18n="check">Проверить</button>
+              <button type="button" id="reset" class="cursor-pointer rounded-[7px] border border-line bg-transparent px-[11px] py-1.5 text-[13px] text-fg" data-i18n="reset">Мой IP</button>
             </div>
           </form>
         </div>
 
-        <div class="card">
-          <h2 data-i18n="sourcesTitle">Сверка источников</h2>
-          <div class="scroll">
-            <table>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]">
+          <h2 class="mt-0 mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-muted" data-i18n="sourcesTitle">Сверка источников</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-[13px]">
               <thead>
                 <tr>
-                  <th data-i18n="source">Источник</th>
-                  <th data-i18n="country">Страна</th>
-                  <th data-i18n="city">Город</th>
-                  <th data-i18n="isp">Провайдер</th>
-                  <th data-i18n="asn">ASN</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="source">Источник</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="country">Страна</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="city">Город</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="isp">Провайдер</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="asn">ASN</th>
                 </tr>
               </thead>
               <tbody id="sources"></tbody>
@@ -76,95 +77,100 @@
           </div>
         </div>
 
-        <div class="card">
-          <h2 data-i18n="latencyTitle">Задержка до сервисов</h2>
-          <p class="hint" data-i18n="latencyHint"></p>
-          <p id="blocked-note" class="notice" data-i18n="blockedNote" hidden></p>
-          <ul class="legend">
-            <li><i data-state="l90"></i><span data-i18n="legend90">до 90 мс</span></li>
-            <li><i data-state="l150"></i><span data-i18n="legend150">до 150 мс</span></li>
-            <li><i data-state="l250"></i><span data-i18n="legend250">до 250 мс</span></li>
-            <li><i data-state="lomg"></i><span data-i18n="legendOmg">от 250 мс</span></li>
-            <li><i data-state="fail"></i><span data-i18n="legendFail">нет ответа</span></li>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]">
+          <h2 class="mt-0 mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-muted" data-i18n="latencyTitle">Задержка до сервисов</h2>
+          <p class="-mt-1 mb-3.5 text-[13px] text-muted" data-i18n="latencyHint"></p>
+          <p id="blocked-note" class="m-0 mb-3.5 rounded-lg border border-warn px-3 py-[9px] text-[13px] text-warn" data-i18n="blockedNote" hidden></p>
+          <ul class="m-0 mb-3.5 flex list-none flex-wrap gap-x-4 gap-y-1.5 p-0 text-xs text-muted">
+            <li class="flex items-center gap-1.5"><i class="block size-[7px] rounded-full bg-line data-[state=l90]:bg-lat90" data-state="l90"></i><span data-i18n="legend90">до 90 мс</span></li>
+            <li class="flex items-center gap-1.5"><i class="block size-[7px] rounded-full bg-line data-[state=l150]:bg-lat150" data-state="l150"></i><span data-i18n="legend150">до 150 мс</span></li>
+            <li class="flex items-center gap-1.5"><i class="block size-[7px] rounded-full bg-line data-[state=l250]:bg-lat250" data-state="l250"></i><span data-i18n="legend250">до 250 мс</span></li>
+            <li class="flex items-center gap-1.5"><i class="block size-[7px] rounded-full bg-line data-[state=lomg]:bg-latomg" data-state="lomg"></i><span data-i18n="legendOmg">от 250 мс</span></li>
+            <li class="flex items-center gap-1.5"><i class="block size-[7px] rounded-full bg-line" data-state="fail"></i><span data-i18n="legendFail">нет ответа</span></li>
           </ul>
-          <h3 class="group" data-i18n="groupAz">Азербайджан</h3>
-          <ul id="latency-az" class="ping"></ul>
-          <h3 class="group" data-i18n="groupWorld">Мир</h3>
-          <ul id="latency-world" class="ping"></ul>
-          <h3 class="group" data-i18n="groupSocial">Соц сети</h3>
-          <ul id="latency-social" class="ping" data-cols="4"></ul>
-          <h3 class="group" data-i18n="groupAi">ИИ</h3>
-          <ul id="latency-ai" class="ping" data-cols="3"></ul>
-          <h3 class="group" data-i18n="groupGames">Игры</h3>
-          <ul id="latency-games" class="ping" data-cols="4"></ul>
+          <h3 class="mt-[18px] mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-muted" data-i18n="groupAz">Азербайджан</h3>
+          <ul id="latency-az" class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-[18px] gap-y-1.5 p-0"></ul>
+          <h3 class="mt-[18px] mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-muted" data-i18n="groupWorld">Мир</h3>
+          <ul id="latency-world" class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-[18px] gap-y-1.5 p-0"></ul>
+          <h3 class="mt-[18px] mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-muted" data-i18n="groupSocial">Соц сети</h3>
+          <ul id="latency-social" class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-[18px] gap-y-1.5 p-0 data-[cols=4]:grid-cols-4 max-[700px]:data-[cols=4]:grid-cols-2" data-cols="4"></ul>
+          <h3 class="mt-[18px] mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-muted" data-i18n="groupAi">ИИ</h3>
+          <ul id="latency-ai" class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-[18px] gap-y-1.5 p-0 data-[cols=3]:grid-cols-3 max-[700px]:data-[cols=3]:grid-cols-2" data-cols="3"></ul>
+          <h3 class="mt-[18px] mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-muted" data-i18n="groupGames">Игры</h3>
+          <ul id="latency-games" class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-[18px] gap-y-1.5 p-0 data-[cols=4]:grid-cols-4 max-[700px]:data-[cols=4]:grid-cols-2" data-cols="4"></ul>
         </div>
       </section>
 
       <section data-view="split" hidden>
-        <div class="intro">
-          <h1 data-i18n="splitTitle">Сплит-туннель</h1>
-          <p data-i18n="splitHint"></p>
+        <div>
+          <h1 class="mt-[18px] mb-1.5 text-[26px] tracking-[-0.02em]" data-i18n="splitTitle">Сплит-туннель</h1>
+          <p class="m-0 mb-[18px] max-w-[54ch] text-muted" data-i18n="splitHint"></p>
         </div>
-        <div class="card">
-          <div class="scroll">
-            <table>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]">
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-[13px]">
               <thead>
                 <tr>
-                  <th data-i18n="site">Сайт</th>
-                  <th data-i18n="ip">IP-адрес</th>
-                  <th data-i18n="location">Геолокация</th>
-                  <th data-i18n="statusHead">Доступность</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="site">Сайт</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="ip">IP-адрес</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="location">Геолокация</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="statusHead">Доступность</th>
                 </tr>
               </thead>
               <tbody id="split-body"></tbody>
             </table>
           </div>
-          <p><button type="button" id="split-run" class="ghost" data-i18n="splitRun">Проверить снова</button></p>
+          <p><button type="button" id="split-run" class="cursor-pointer rounded-[7px] border border-line bg-transparent px-[11px] py-1.5 text-[13px] text-fg" data-i18n="splitRun">Проверить снова</button></p>
         </div>
       </section>
 
       <section data-view="multi" hidden>
-        <div class="intro">
-          <h1 data-i18n="multiTitle">Мульти-выход</h1>
-          <p data-i18n="multiHint"></p>
+        <div>
+          <h1 class="mt-[18px] mb-1.5 text-[26px] tracking-[-0.02em]" data-i18n="multiTitle">Мульти-выход</h1>
+          <p class="m-0 mb-[18px] max-w-[54ch] text-muted" data-i18n="multiHint"></p>
         </div>
 
-        <div class="card">
-          <h2 data-i18n="sweepTitle">Проба</h2>
-          <div class="sweep-head">
-            <output id="sweep-progress" class="ip">0 / 0</output>
-            <span id="sweep-state" class="hint"></span>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]" data-server>
+          <h2 class="mt-0 mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-muted" data-i18n="sweepTitle">Проба</h2>
+          <div class="mb-2.5 flex items-baseline justify-between gap-3">
+            <output id="sweep-progress" class="font-mono text-xl font-semibold tracking-[-0.02em]">0 / 0</output>
+            <span id="sweep-state" class="m-0 text-[13px] text-muted"></span>
           </div>
-          <progress id="sweep-bar" max="1" value="0"></progress>
-          <p id="sweep-counts" class="hint"></p>
-          <button type="button" id="sweep-run" class="ghost" data-i18n="sweepRun">Запустить заново</button>
+          <progress id="sweep-bar" class="mb-2.5 h-1.5 w-full appearance-none overflow-hidden rounded-[3px] border-0 bg-line" max="1" value="0"></progress>
+          <p id="sweep-counts" class="-mt-1 mb-3.5 text-[13px] text-muted"></p>
+          <button type="button" id="sweep-run" class="cursor-pointer rounded-[7px] border border-line bg-transparent px-[11px] py-1.5 text-[13px] text-fg" data-i18n="sweepRun">Запустить заново</button>
+          <button type="button" id="sweep-export" class="cursor-pointer rounded-[7px] border border-line bg-transparent px-[11px] py-1.5 text-[13px] text-fg" data-i18n="sweepExport" hidden>Скачать CSV</button>
         </div>
 
-        <div class="card">
-          <h2><span data-i18n="foundTitle">Найдено адресов</span> <span id="found-count" class="count"></span></h2>
-          <ul id="found-list" class="tree"></ul>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]">
+          <h2 class="mt-0 mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-muted"><span data-i18n="foundTitle">Найдено адресов</span> <span id="found-count" class="font-medium text-muted"></span></h2>
+          <div class="my-1 mb-2.5 flex flex-wrap items-center gap-2">
+            <input type="search" id="multi-filter" class="min-w-0 flex-1 basis-[180px] rounded-[7px] border border-line bg-bg px-[11px] py-[7px] font-[inherit] text-fg" data-i18n-placeholder="filter" placeholder="Фильтр…" autocomplete="off" />
+            <button type="button" id="multi-export" class="cursor-pointer rounded-[7px] border border-line bg-transparent px-[11px] py-1.5 text-[13px] text-fg" data-i18n="sweepExport" hidden>Скачать CSV</button>
+          </div>
+          <ul id="found-list" class="m-0 list-none p-0"></ul>
         </div>
 
-        <div class="card">
-          <h2><span data-i18n="probesTitle">Пробы по странам</span> <span id="probe-count" class="count"></span></h2>
-          <ul id="probe-tree" class="tree"></ul>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]" data-server>
+          <h2 class="mt-0 mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-muted"><span data-i18n="probesTitle">Пробы по странам</span> <span id="probe-count" class="font-medium text-muted"></span></h2>
+          <ul id="probe-tree" class="m-0 list-none p-0"></ul>
         </div>
       </section>
 
       <section data-view="cdn" hidden>
-        <div class="intro">
-          <h1 data-i18n="cdnTitle">Узлы CDN</h1>
-          <p data-i18n="cdnHint"></p>
+        <div>
+          <h1 class="mt-[18px] mb-1.5 text-[26px] tracking-[-0.02em]" data-i18n="cdnTitle">Узлы CDN</h1>
+          <p class="m-0 mb-[18px] max-w-[54ch] text-muted" data-i18n="cdnHint"></p>
         </div>
-        <div class="card">
-          <div class="scroll">
-            <table>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]">
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-[13px]">
               <thead>
                 <tr>
-                  <th data-i18n="source">Источник</th>
-                  <th data-i18n="cdnNode">Узел</th>
-                  <th data-i18n="cdnStatus">Статус</th>
-                  <th data-i18n="time">Время</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="source">Источник</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="cdnNode">Узел</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="cdnStatus">Статус</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="time">Время</th>
                 </tr>
               </thead>
               <tbody id="cdn-body"></tbody>
@@ -174,20 +180,20 @@
       </section>
 
       <section data-view="dns" hidden>
-        <div class="intro">
-          <h1 data-i18n="dnsTitle">DNS-выход</h1>
-          <p data-i18n="dnsHint"></p>
+        <div>
+          <h1 class="mt-[18px] mb-1.5 text-[26px] tracking-[-0.02em]" data-i18n="dnsTitle">DNS-выход</h1>
+          <p class="m-0 mb-[18px] max-w-[54ch] text-muted" data-i18n="dnsHint"></p>
         </div>
-        <div class="card">
-          <div class="scroll">
-            <table>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]">
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-[13px]">
               <thead>
                 <tr>
-                  <th data-i18n="resolver">Резолвер</th>
-                  <th data-i18n="exitIp">IP выхода</th>
-                  <th data-i18n="country">Страна</th>
-                  <th data-i18n="city">Город</th>
-                  <th data-i18n="time">Время</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="resolver">Резолвер</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="exitIp">IP выхода</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="country">Страна</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="city">Город</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="time">Время</th>
                 </tr>
               </thead>
               <tbody id="dns-body"></tbody>
@@ -197,19 +203,19 @@
       </section>
 
       <section data-view="stun" hidden>
-        <div class="intro">
-          <h1 data-i18n="stunTitle">WebRTC (STUN)</h1>
-          <p data-i18n="stunHint"></p>
+        <div>
+          <h1 class="mt-[18px] mb-1.5 text-[26px] tracking-[-0.02em]" data-i18n="stunTitle">WebRTC (STUN)</h1>
+          <p class="m-0 mb-[18px] max-w-[54ch] text-muted" data-i18n="stunHint"></p>
         </div>
-        <div class="card">
-          <div class="scroll">
-            <table>
+        <div class="mb-4 rounded-xl border border-line bg-card p-[18px]">
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-[13px]">
               <thead>
                 <tr>
-                  <th data-i18n="stunServer">STUN-сервер</th>
-                  <th data-i18n="ip">IP-адрес</th>
-                  <th data-i18n="country">Страна</th>
-                  <th data-i18n="city">Город</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="stunServer">STUN-сервер</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="ip">IP-адрес</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="country">Страна</th>
+                  <th class="whitespace-nowrap pr-3 pb-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-muted" data-i18n="city">Город</th>
                 </tr>
               </thead>
               <tbody id="stun-body"></tbody>
@@ -219,9 +225,9 @@
       </section>
     </main>
 
-    <footer>
+    <footer class="mx-auto flex max-w-[720px] justify-between pt-2 text-xs text-muted">
       <span>ipcheck</span>
-      <span>ip-api.com · ipwho.is</span>
+      <span>ipapi.is · ipwho.is</span>
     </footer>
 
     <script type="module" src="./app.js"></script>

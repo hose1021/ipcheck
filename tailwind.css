@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@source "./public";
+@source not "./public/style.css";
+
+@theme {
+  --color-bg: #fafaf8;
+  --color-card: #ffffff;
+  --color-fg: #16181d;
+  --color-muted: #6b7280;
+  --color-line: #e2e3e7;
+  --color-accent: #0f6b4f;
+  --color-bad: #b4351f;
+  --color-warn: #a06a00;
+  --color-lat90: oklch(52.7% 0.154 150.069);
+  --color-lat150: oklch(60% 0.18 130.85);
+  --color-lat250: oklch(68% 0.15 91.936);
+  --color-latomg: oklch(58% 0.19 47.604);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", monospace;
+}
+
+:root {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0f1115;
+  --color-card: #161922;
+  --color-fg: #e7e9ee;
+  --color-muted: #8b93a3;
+  --color-line: #262a35;
+  --color-accent: #4fd1a5;
+  --color-bad: #ff8a72;
+  --color-warn: #e0b050;
+  --color-lat150: oklch(76.8% 0.233 130.85);
+  --color-lat250: oklch(85.2% 0.199 91.936);
+  --color-latomg: oklch(70.5% 0.213 47.604);
+}
+
+[hidden] {
+  display: none;
+}
+
+/* The progress internals expose no utility surface. */
+progress::-webkit-progress-value {
+  background: var(--color-accent);
+}
+
+progress::-moz-progress-bar {
+  background: var(--color-accent);
+}

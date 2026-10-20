@@ -55,8 +55,12 @@ const esc = (value) =>
 
 const countryCode = (code) => (typeof code === "string" && /^[A-Za-z]{2}$/.test(code) ? code.toUpperCase() : "");
 
+const CELL = "border-t border-line py-[7px] pr-3 align-top";
+
 const cells = (values, cls = "") =>
-  `<tr${cls ? ` class="${cls}"` : ""}>${values.map((v) => `<td>${v === null || v === undefined || v === "" ? "—" : esc(v)}</td>`).join("")}</tr>`;
+  `<tr${cls ? ` class="${cls}"` : ""}>${values
+    .map((v) => `<td class="${CELL}">${v === null || v === undefined || v === "" ? "—" : esc(v)}</td>`)
+    .join("")}</tr>`;
 
 const STORE_THEME = "ipcheck-theme";
 const darkMedia = matchMedia("(prefers-color-scheme: dark)");
@@ -76,6 +80,7 @@ function setTheme(mode, persist) {
 function applyLanguage() {
   document.documentElement.lang = lang;
   for (const el of $$("[data-i18n]")) el.textContent = t(lang, el.dataset.i18n);
+  for (const el of $$("[data-i18n-placeholder]")) el.placeholder = t(lang, el.dataset.i18nPlaceholder);
   $("#q").placeholder = t(lang, "placeholder");
   for (const b of $$("[data-lang]")) b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
   document.title = `${t(lang, TITLE_OF_VIEW[state.view ?? "home"])} · ipcheck`;
@@ -88,18 +93,18 @@ function applyLanguage() {
 
 function fact(label, value) {
   if (!value) return "";
-  return `<div><dt>${t(lang, label)}</dt><dd>${value}</dd></div>`;
+  return `<div><dt class="text-xs uppercase tracking-[0.06em] text-muted">${t(lang, label)}</dt><dd class="mb-0 mt-0.5 tabular-nums">${value}</dd></div>`;
 }
 
 function render(data) {
   const p = data.primary;
   $("#ip").textContent = data.ip;
   if (!p) {
-    $("#facts").innerHTML = `<div><dd class="err">${t(lang, "failed")}</dd></div>`;
+    $("#facts").innerHTML = `<div><dd class="text-bad">${t(lang, "failed")}</dd></div>`;
   } else {
     const place = [p.city, p.region].filter(Boolean).join(", ");
     $("#facts").innerHTML = [
-      fact("country", p.country ? `${p.countryCode ? `<span class="cc">${countryCode(p.countryCode)}</span>` : ""}${esc(p.country)}` : ""),
+      fact("country", p.country ? `${p.countryCode ? `<span class="mr-[7px] inline-block rounded border border-line px-[5px] align-[1px] text-[11px] tracking-[0.04em] text-muted">${countryCode(p.countryCode)}</span>` : ""}${esc(p.country)}` : ""),
       fact("city", esc(place)),
       fact("isp", esc(p.isp ?? p.org)),
       fact("asn", p.asn ? `AS${esc(p.asn)}` : ""),
@@ -111,7 +116,7 @@ function render(data) {
     .map((s) =>
       s.ok
         ? cells([s.name, s.country, s.city, s.isp ?? s.org, s.asn ? `AS${s.asn}` : "—"])
-        : cells([s.name, `${t(lang, "error")}: ${s.error}`, "", "", ""], "bad"),
+        : cells([s.name, `${t(lang, "error")}: ${s.error}`, "", "", ""], "text-bad"),
     )
     .join("");
 }
@@ -202,6 +207,123 @@ async function staticLookup(ip) {
       .catch((e) => ({ name: "ipinfo.io", ok: false, error: e.message })),
   ]);
   return { ip, primary: results.find((r) => r.ok) ?? null, sources: results };
+}
+
+// Static build: no server, so each view talks to CORS-enabled public endpoints.
+const ECHO_STATIC = [
+  { name: "ipify.org", url: "https://api.ipify.org?format=json", pattern: /"ip":"([^"]+)"/ },
+  { name: "Amazon", url: "https://checkip.amazonaws.com", pattern: /^([0-9a-fA-F:.]+)/ },
+  { name: "ipinfo.io", url: "https://ipinfo.io/json", pattern: /"ip":\s*"([^"]+)"/ },
+  { name: "ipwho.is", url: "https://ipwho.is/", pattern: /"ip":\s*"([^"]+)"/ },
+  { name: "ipapi.is", url: "https://api.ipapi.is/", pattern: /"ip":"([^"]+)"/ },
+  { name: "ipapi.co", url: "https://ipapi.co/json/", pattern: /"ip":\s*"([^"]+)"/ },
+  { name: "icanhazip", url: "https://ipv4.icanhazip.com", pattern: /^([0-9.]+)/ },
+  { name: "Cloudflare", url: "https://www.cloudflare.com/cdn-cgi/trace", pattern: /^ip=(.+)$/m },
+];
+
+// Resolvers that publish a CORS-enabled JSON DoH endpoint.
+const DNS_STATIC = [
+  { name: "Cloudflare", url: "https://cloudflare-dns.com/dns-query?name=whoami.akamai.net&type=A" },
+  { name: "Google", url: "https://dns.google/resolve?name=whoami.akamai.net&type=A" },
+  { name: "Quad9", url: "https://dns.quad9.net:5053/dns-query?name=whoami.akamai.net&type=A" },
+  { name: "OpenDNS", url: "https://doh.opendns.com/dns-query?name=whoami.akamai.net&type=A" },
+  { name: "AdGuard", url: "https://dns.adguard-dns.com/resolve?name=whoami.akamai.net&type=A" },
+  { name: "AliDNS", url: "https://dns.alidns.com/resolve?name=whoami.akamai.net&type=A" },
+];
+
+// Only edges that expose the node to a cross-origin page: Cloudflare's trace
+// body and any host with access-control-expose-headers.
+const CDN_STATIC = [
+  { name: "Cloudflare", url: "https://www.cloudflare.com/cdn-cgi/trace", trace: true },
+  { name: "jsDelivr", url: "https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js" },
+];
+
+async function geoStatic(ip) {
+  try {
+    const j = await (await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, { cache: "no-store" })).json();
+    return j.success ? { country: j.country, countryCode: j.country_code, city: j.city } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function runMultiStatic() {
+  const probes = await Promise.all(
+    ECHO_STATIC.map(async ({ name, url, pattern }) => {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        const ip = pattern.exec(await res.text())?.[1]?.trim() ?? null;
+        return { name, ok: ip !== null, ip };
+      } catch {
+        return { name, ok: false, ip: null };
+      }
+    }),
+  );
+  const geo = await Promise.all(probes.map((p) => (p.ip ? geoStatic(p.ip) : null)));
+  state.multi = {
+    rows: probes.map((p, i) => ({
+      name: p.name,
+      ok: p.ok,
+      ip: p.ip,
+      country: geo[i]?.country ?? null,
+      countryCode: geo[i]?.countryCode ?? null,
+      city: geo[i]?.city ?? null,
+    })),
+  };
+  renderFound(state.multi, $("#multi-filter").value);
+}
+
+async function runDnsStatic() {
+  const body = $("#dns-body");
+  body.innerHTML = cells(["…"]);
+  const rows = await Promise.all(
+    DNS_STATIC.map(async ({ name, url }) => {
+      const started = performance.now();
+      try {
+        const res = await fetch(url, { cache: "no-store", headers: { accept: "application/dns-json" } });
+        const j = await res.json();
+        const exitIp = (j.Answer ?? []).find((a) => a.type === 1)?.data ?? null;
+        return { name, ok: exitIp !== null, exitIp, ms: Math.round(performance.now() - started) };
+      } catch {
+        return { name, ok: false, exitIp: null, ms: null };
+      }
+    }),
+  );
+  const geo = await Promise.all(rows.map((r) => (r.exitIp ? geoStatic(r.exitIp) : null)));
+  body.innerHTML = rows
+    .map((r, i) =>
+      r.ok
+        ? cells([r.name, r.exitIp, geo[i]?.country ?? "", geo[i]?.city ?? "", `${r.ms} ms`])
+        : cells([r.name, t(lang, "failed"), "", "", ""], "text-bad"),
+    )
+    .join("");
+}
+
+async function runCdnStatic() {
+  const body = $("#cdn-body");
+  body.innerHTML = cells(["…"]);
+  const rows = await Promise.all(
+    CDN_STATIC.map(async ({ name, url, trace }) => {
+      const started = performance.now();
+      try {
+        const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
+        const ms = Math.round(performance.now() - started);
+        const node = trace
+          ? (/^colo=(.+)$/m.exec(await res.text())?.[1]?.trim() ?? null)
+          : (res.headers.get("x-served-by")?.split(",")[0].trim().split("-").pop() ?? null);
+        return { name, ok: true, status: res.status, ms, node };
+      } catch {
+        return { name, ok: false, status: null, ms: null, node: null };
+      }
+    }),
+  );
+  body.innerHTML = rows
+    .map((r) =>
+      r.ok
+        ? cells([r.name, r.node ?? "—", String(r.status), `${r.ms} ms`])
+        : cells([r.name, t(lang, "failed"), "", ""], "text-bad"),
+    )
+    .join("");
 }
 
 async function lookup(ip) {
@@ -306,7 +428,7 @@ async function loadIcons() {
   );
 }
 
-const iconSvg = (name) => {
+const iconSvg = (name, extra = "") => {
   const ref = SITE_ICONS[displayName(name)] ?? "world";
   const key = ref.includes(":") ? ref : `tabler:${ref}`;
   const body = iconBodies.get(key) ?? iconBodies.get("tabler:world");
@@ -314,16 +436,16 @@ const iconSvg = (name) => {
   const paint = key.startsWith("simple-icons:")
     ? 'fill="currentColor"'
     : 'fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
-  return `<span class="lead"><svg viewBox="0 0 24 24" width="15" height="15" ${paint}>${body}</svg></span>`;
+  return `<span class="inline-flex size-[15px] shrink-0 items-center text-muted ${extra}"><svg viewBox="0 0 24 24" width="15" height="15" ${paint}>${body}</svg></span>`;
 };
 
 const latencyState = (ms) =>
   ms === null ? "fail" : ms < 90 ? "l90" : ms < 150 ? "l150" : ms < 250 ? "l250" : "lomg";
 
 const dots = (samples, count = RUNS) =>
-  `<span class="dots" aria-hidden="true">${Array.from({ length: count }, (_, i) => {
+  `<span class="dots flex shrink-0 gap-1" aria-hidden="true">${Array.from({ length: count }, (_, i) => {
     const ms = samples[i];
-    return `<i data-state="${ms === undefined || ms === null ? "pending" : latencyState(ms)}"></i>`;
+    return `<i class="block size-[7px] rounded-full bg-line data-[state=l90]:bg-lat90 data-[state=l150]:bg-lat150 data-[state=l250]:bg-lat250 data-[state=lomg]:bg-latomg data-[state=fail]:bg-line data-[state=pending]:bg-line data-[state=pending]:opacity-40" data-state="${ms === undefined || ms === null ? "pending" : latencyState(ms)}"></i>`;
   }).join("")}</span>`;
 
 // Timing runs in the browser: the number must describe the visitor's own route.
@@ -381,8 +503,8 @@ async function measureTarget(target, item) {
 
 const statusBadge = (ok) =>
   ok === null
-    ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".45"/><text x="12" y="16.5" text-anchor="middle" font-size="12" font-weight="700" fill="var(--card)">?</text></svg>'
-    : '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M7.8 12.4l2.7 2.7 5.7-6.1" fill="none" stroke="var(--card)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    ? '<svg class="ml-auto block" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".45"/><text x="12" y="16.5" text-anchor="middle" font-size="12" font-weight="700" fill="var(--color-card)">?</text></svg>'
+    : '<svg class="ml-auto block" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M7.8 12.4l2.7 2.7 5.7-6.1" fill="none" stroke="var(--color-card)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 const imageProbe = (url, timeout = 6000) =>
   new Promise((resolve) => {
@@ -443,7 +565,7 @@ async function measureAll() {
     list.innerHTML = items
       .map(
         ({ name }) =>
-          `<li>${iconSvg(name)}<span class="name">${esc(displayName(name))}</span><span class="ms" data-host="${esc(name)}">…</span>${
+          `<li class="flex items-center gap-2.5 border-b border-dashed border-line py-[3px]">${iconSvg(name, "-mr-1")}<span class="min-w-0 flex-1 truncate text-muted">${esc(displayName(name))}</span><span class="ms min-w-[52px] text-right font-mono text-[13px] font-medium tabular-nums data-[state=l90]:text-lat90 data-[state=l150]:text-lat150 data-[state=l250]:text-lat250 data-[state=lomg]:text-latomg data-[state=fail]:text-muted data-[state=down]:text-bad" data-host="${esc(name)}">…</span>${
             availabilityOnly ? "" : dots([])
           }</li>`,
       )
@@ -471,17 +593,17 @@ function renderSplit(rows) {
   body.innerHTML = SPLIT_GROUPS.map((group) => {
     const items = rows.filter((row) => row.group === group);
     if (!items.length) return "";
-    const head = `<tr class="group-row"><th colspan="4">${t(lang, `group_${group}`)}</th></tr>`;
+    const head = `<tr class="[&:first-child>th]:border-t-0 [&:first-child>th]:pt-0"><th colspan="4" class="border-t border-line pb-1.5 pr-3 pt-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">${t(lang, `group_${group}`)}</th></tr>`;
     const lines = items
       .map((row) => {
         const status = row.reachable
-          ? `<td class="ok-cell">${t(lang, "statusOk")}</td>`
-          : `<td class="bad-cell">${t(lang, "statusDown")}</td>`;
+          ? `<td class="${CELL} text-accent">${t(lang, "statusOk")}</td>`
+          : `<td class="${CELL} text-bad">${t(lang, "statusDown")}</td>`;
         const ip = row.exitIp
           ? esc(row.exitIp)
-          : `<span class="muted" title="${t(lang, "noEchoHint")}">—</span>`;
+          : `<span class="text-muted" title="${t(lang, "noEchoHint")}">—</span>`;
         const geo = row.exitIp ? [row.country, row.city].filter(Boolean).join(" · ") : "";
-        return `<tr${row.reachable ? "" : ` class="bad"`}><td class="site">${iconSvg(row.name)}${esc(displayName(row.name))}</td><td class="mono">${ip}</td><td class="muted">${esc(
+        return `<tr${row.reachable ? "" : ` class="text-bad"`}><td class="${CELL}">${iconSvg(row.name, "mr-[7px] align-[-2px]")}${esc(displayName(row.name))}</td><td class="${CELL} font-mono text-[13px] tabular-nums">${ip}</td><td class="${CELL} text-muted">${esc(
           geo,
         )}</td>${status}</tr>`;
       })
@@ -503,7 +625,7 @@ async function runSplit() {
 
 // Chromium ships no Azerbaijani region names and silently returns the system
 // locale, so AZ falls back to English — the same choice the original site makes.
-const REGION_LOCALE = { ru: "ru", az: "en" };
+const REGION_LOCALE = { ru: "ru", az: "en", en: "en" };
 
 const regionName = (cc) => {
   try {
@@ -523,18 +645,19 @@ const flagImg = (cc) =>
     : "";
 
 function nodeHtml({ cc = "", title, sub = "", summary = "", rawSummary = "", children = "", open = false, attrs = "" }) {
-  return `<li class="node" ${attrs}>
-    <button type="button" class="row" aria-expanded="${open}">
-      <span class="lead">${flagImg(cc)}</span>
-      <span class="main"><span class="title">${esc(title)}</span>${sub ? `<span class="sub">${esc(sub)}</span>` : ""}</span>
-      <span class="summary">${rawSummary || esc(summary)}</span>
-      <span class="chev" aria-hidden="true"></span>
+  return `<li class="border-t border-line first:border-t-0" ${attrs}>
+    <button type="button" class="group flex w-full items-center gap-2.5 border-0 bg-none py-[9px] text-left text-inherit" aria-expanded="${open}">
+      <span class="flex w-6 shrink-0 justify-center">${flagImg(cc)}</span>
+      <span class="flex min-w-0 flex-1 flex-col gap-px"><span class="font-semibold tabular-nums group-hover:text-accent">${esc(title)}</span>${sub ? `<span class="truncate text-xs text-muted">${esc(sub)}</span>` : ""}</span>
+      <span class="flex max-w-[46%] shrink-0 items-baseline gap-2 truncate text-xs text-muted">${rawSummary || esc(summary)}</span>
+      <span class="size-[7px] shrink-0 rotate-45 border-b-[1.5px] border-r-[1.5px] border-muted transition-transform duration-150 group-aria-expanded:-rotate-[135deg]" aria-hidden="true"></span>
     </button>
-    <div class="children"${open ? "" : " hidden"}>${children}</div>
+    <div class="flex flex-wrap gap-1.5 px-0 pt-0.5 pb-3 pl-[34px]"${open ? "" : " hidden"}>${children}</div>
   </li>`;
 }
 
-const chip = (label, failed = false) => `<span class="chip${failed ? " fail" : ""}">${esc(label)}</span>`;
+const chip = (label, failed = false) =>
+  `<span class="${failed ? "border-bad text-bad" : "border-line bg-bg"} rounded-[5px] border px-2 py-[3px] text-xs">${esc(label)}</span>`;
 
 const chips = (labels) => labels.map((label) => chip(label)).join("");
 
@@ -543,7 +666,7 @@ const chipsWithFailures = (ok, failed) => [...ok.map((label) => chip(label)), ..
 const preview = (labels) =>
   labels.length > 6 ? `${labels.slice(0, 6).join(", ")}, +${labels.length - 6}` : labels.join(", ");
 
-function renderFound(data) {
+function renderFound(data, query = "") {
   const groups = new Map();
   for (const row of data.rows) {
     if (!row.ip) continue;
@@ -557,7 +680,11 @@ function renderFound(data) {
     group.services.push(row.name);
     groups.set(row.ip, group);
   }
-  state.found = [...groups.values()].sort((a, b) => b.services.length - a.services.length);
+  const q = query.trim().toLowerCase();
+  state.found = [...groups.values()]
+    .sort((a, b) => b.services.length - a.services.length)
+    .filter((g) => !q || [g.ip, g.country, g.city, ...g.services].join(" ").toLowerCase().includes(q));
+  $("#multi-export").hidden = state.found.length === 0;
   $("#found-count").textContent = `(${state.found.length})`;
   $("#found-list").innerHTML = state.found
     .map((g) =>
@@ -584,8 +711,11 @@ async function runMulti() {
 const countryLabels = new Map();
 const openCountries = new Set();
 
-function renderProbeTree(snapshot) {
-  const rows = snapshot.countries;
+function renderProbeTree(snapshot, query = "") {
+  const q = query.trim().toLowerCase();
+  const rows = snapshot.countries.filter(
+    (c) => !q || regionName(c.cc).toLowerCase().includes(q) || c.cc.toLowerCase().includes(q),
+  );
   $("#probe-count").textContent = `(${rows.length})`;
   $("#probe-tree").innerHTML = rows
     .map((c) =>
@@ -594,8 +724,8 @@ function renderProbeTree(snapshot) {
         title: regionName(c.cc),
         rawSummary:
           c.fail > 0
-            ? `<span class="ok">${c.ok}</span><span class="fail">${c.fail}</span>`
-            : `<span class="ok">${c.ok}</span>`,
+            ? `<span class="text-fg tabular-nums">${c.ok}</span><span class="text-bad tabular-nums">${c.fail}</span>`
+            : `<span class="text-fg tabular-nums">${c.ok}</span>`,
         children: countryLabels.has(c.cc)
           ? chipsWithFailures(countryLabels.get(c.cc).ok, countryLabels.get(c.cc).failed)
           : "",
@@ -611,7 +741,7 @@ async function loadCountryLabels(node) {
   if (!cc || countryLabels.has(cc)) return;
   const { labels, failed } = await (await fetch(`/api/sweep/country?cc=${encodeURIComponent(cc)}`)).json();
   countryLabels.set(cc, { ok: labels, failed });
-  node.querySelector(".children").innerHTML = chipsWithFailures(labels, failed);
+  node.querySelector("div").innerHTML = chipsWithFailures(labels, failed);
 }
 
 function renderSweep(snapshot) {
@@ -625,15 +755,33 @@ function renderSweep(snapshot) {
     : snapshot.done
       ? t(lang, "sweepDone")
       : "";
-  $("#sweep-counts").innerHTML = `${t(lang, "sweepOk")}: ${snapshot.ok} · ${t(lang, "sweepFail")}: <span class="fail">${snapshot.fail}</span>`;
-  renderProbeTree(snapshot);
+  $("#sweep-counts").innerHTML = `${t(lang, "sweepOk")}: ${snapshot.ok} · ${t(lang, "sweepFail")}: <span class="text-bad tabular-nums">${snapshot.fail}</span>`;
+  $("#sweep-export").hidden = snapshot.done === 0;
+  renderProbeTree(snapshot, $("#multi-filter").value);
 }
 
 let sweepTimer = null;
+let sweepWasRunning = false;
+
+function notifySweepDone() {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    new Notification(t(lang, "sweepDone"), {
+      body: `${t(lang, "sweepOk")}: ${state.sweep.ok} · ${t(lang, "sweepFail")}: ${state.sweep.fail}`,
+    });
+  } catch {
+    /* notifications blocked by the page or the platform */
+  }
+}
 
 async function pollSweep() {
   const snapshot = await (await fetch("/api/sweep/status")).json();
+  if (sweepWasRunning && !snapshot.running && snapshot.done) {
+    state.sweep = snapshot;
+    notifySweepDone();
+  }
   state.sweep = snapshot;
+  sweepWasRunning = snapshot.running;
   renderSweep(snapshot);
   clearTimeout(sweepTimer);
   if (snapshot.running) sweepTimer = setTimeout(pollSweep, 1200);
@@ -660,11 +808,13 @@ async function resumeSweep() {
 }
 
 async function runMultiView() {
+  if (!HAS_API) return runMultiStatic();
   runMulti();
   resumeSweep();
 }
 
 async function runCdn() {
+  if (!HAS_API) return runCdnStatic();
   const body = $("#cdn-body");
   body.innerHTML = cells(["…"]);
   try {
@@ -682,6 +832,7 @@ async function runCdn() {
 }
 
 async function runDns() {
+  if (!HAS_API) return runDnsStatic();
   const body = $("#dns-body");
   body.innerHTML = cells(["…"]);
   try {
@@ -735,7 +886,7 @@ async function runStun() {
       const geo = ip ? await geoOf(ip) : null;
       body.children[index].outerHTML = cells(
         [server, ip ?? t(lang, "failed"), geo?.country ?? "", geo?.city ?? ""],
-        ip ? "" : "bad",
+        ip ? "" : "text-bad",
       );
     }),
   );
@@ -764,7 +915,7 @@ async function detectApi() {
     HAS_API = false;
   }
   if (!HAS_API) {
-    for (const link of $$(".tabs a[data-server]")) link.hidden = true;
+    for (const el of $$("[data-server]")) el.hidden = true;
   }
 }
 
@@ -781,7 +932,8 @@ function route() {
   document.title = `${t(lang, TITLE_OF_VIEW[view])} · ipcheck`;
   for (const section of $$("[data-view]")) section.hidden = section.dataset.view !== view;
   for (const link of $$(".tabs a")) {
-    link.classList.toggle("active", new URL(link.href).pathname === path);
+    if (new URL(link.href).pathname === path) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
   }
   if (view === "home") initHome();
   else if (!started[view]) {
@@ -805,12 +957,12 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("click", (event) => {
-  const row = event.target.closest(".tree .row");
-  if (!row) return;
+  const row = event.target.closest("button[aria-expanded]");
+  if (!row || !row.closest("#found-list, #probe-tree")) return;
   const node = row.parentElement;
   const open = row.getAttribute("aria-expanded") === "true";
   row.setAttribute("aria-expanded", String(!open));
-  node.querySelector(".children").hidden = open;
+  node.querySelector("div").hidden = open;
   const cc = node.dataset.cc;
   if (!cc) return;
   if (open) openCountries.delete(cc);
@@ -848,7 +1000,37 @@ $("#reset").addEventListener("click", async () => {
 });
 
 $("#split-run").addEventListener("click", runSplit);
-$("#sweep-run").addEventListener("click", startSweep);
+$("#sweep-run").addEventListener("click", () => {
+  if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
+  startSweep();
+});
+
+$("#multi-filter").addEventListener("input", () => {
+  const q = $("#multi-filter").value;
+  if (state.multi) renderFound(state.multi, q);
+  if (state.sweep) renderProbeTree(state.sweep, q);
+});
+
+$("#multi-export").addEventListener("click", () => {
+  const rows = state.multi?.rows ?? [];
+  const cell = (v) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const csv = ["source,ip,country,city", ...rows.map((r) => [r.name, r.ip, r.country ?? "", r.city ?? ""].map(cell).join(","))];
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv.join("\n")], { type: "text/csv" }));
+  a.download = "multi.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+$("#sweep-export").addEventListener("click", async () => {
+  const res = await fetch("/api/sweep/export");
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "sweep.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
 
 $("#theme").addEventListener("click", () => {
   setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true);

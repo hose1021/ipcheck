@@ -2,9 +2,15 @@
   "name": "ipcheck",
   "private": true,
   "scripts": {
-    "start": "bun run server.ts"
+    "start": "bun run server.ts",
+    "build:css": "bunx @tailwindcss/cli -i tailwind.css -o public/style.css --minify",
+    "watch:css": "bunx @tailwindcss/cli -i tailwind.css -o public/style.css --watch"
   },
   "dependencies": {
     "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
   }
 }

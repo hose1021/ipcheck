@@ -33,17 +33,14 @@ type Lookup = {
 };
 
 // Response shapes of the two public providers; parsed once at the boundary.
-const IpApiResponse = z.object({
-  status: z.string(),
-  message: z.string().optional(),
-  query: z.string().optional(),
+const IpapiisResponse = z.object({
+  ip: z.string().optional(),
+  error: z.string().optional(),
   country: z.string().optional(),
-  countryCode: z.string().optional(),
-  regionName: z.string().optional(),
+  region: z.string().optional(),
   city: z.string().optional(),
-  isp: z.string().optional(),
-  org: z.string().optional(),
-  as: z.string().optional(),
+  company: z.string().optional(),
+  asn: z.string().optional(),
   timezone: z.string().optional(),
   lat: z.number().optional(),
   lon: z.number().optional(),
@@ -69,34 +66,32 @@ const IpwhoResponse = z.object({
   longitude: z.number().optional(),
 });
 
+const CACHE_MAX = 5_000;
 const cache = new Map<string, { at: number; data: unknown }>();
 
-export function parseIpApi(raw: unknown): Lookup {
-  const parsed = IpApiResponse.safeParse(raw);
-  if (!parsed.success) throw new Error("unexpected ip-api.com response");
+export function parseIpapi(raw: unknown): Lookup {
+  const parsed = IpapiisResponse.safeParse(raw);
+  if (!parsed.success) throw new Error("unexpected ipapi.is response");
   const j = parsed.data;
-  if (j.status !== "success") throw new Error(j.message ?? "lookup failed");
+  if (j.error) throw new Error(j.error);
   return {
-    ip: j.query ?? "",
+    ip: j.ip ?? "",
     country: j.country,
-    countryCode: j.countryCode,
-    region: j.regionName,
+    region: j.region,
     city: j.city,
-    isp: j.isp,
-    org: j.org,
-    asn: j.as?.replace(/^AS/, "").split(" ")[0],
+    isp: j.company,
+    asn: j.asn?.replace(/^AS/, "").split(" ")[0],
     timezone: j.timezone,
     lat: j.lat,
     lon: j.lon,
   };
 }
 
-async function fromIpApi(ip: string): Promise<Lookup> {
-  const fields = "status,message,country,countryCode,regionName,city,isp,org,as,timezone,lat,lon,query";
-  const res = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=${fields}&lang=en`, {
+async function fromIpapi(ip: string): Promise<Lookup> {
+  const res = await fetch(`https://api.ipapi.is?q=${encodeURIComponent(ip)}`, {
     signal: AbortSignal.timeout(6000),
   });
-  return { ...parseIpApi(await res.json()), ip: ip };
+  return { ...parseIpapi(await res.json()), ip: ip };
 }
 
 export function parseIpwhois(raw: unknown): Lookup {
@@ -128,7 +123,7 @@ async function fromIpwhois(ip: string): Promise<Lookup> {
 }
 
 const SOURCES = [
-  { name: "ip-api.com", fn: fromIpApi },
+  { name: "ipapi.is", fn: fromIpapi },
   { name: "ipwho.is", fn: fromIpwhois },
 ];
 
@@ -139,6 +134,30 @@ export function clientIp(req: Request): string | null {
   const ip = raw?.trim();
   if (!ip || ip === "::1" || ip.startsWith("127.")) return null;
   return ip;
+}
+
+// Fixed-window limiter per key; guards the open /api/lookup endpoint.
+const RATE_LIMIT_MAX = 60;
+const RATE_WINDOW_MS = 60_000;
+const rateHits = new Map<string, { start: number; count: number }>();
+
+export function rateLimit(
+  key: string,
+  now = Date.now(),
+  max = RATE_LIMIT_MAX,
+  windowMs = RATE_WINDOW_MS,
+  capacity = 10_000,
+  hits: Map<string, { start: number; count: number }> = rateHits,
+): boolean {
+  const hit = hits.get(key);
+  if (!hit || now - hit.start >= windowMs) {
+    if (hits.size >= capacity) hits.delete(hits.keys().next().value);
+    hits.set(key, { start: now, count: 1 });
+    return true;
+  }
+  if (hit.count >= max) return false;
+  hit.count++;
+  return true;
 }
 
 async function lookup(ip: string) {
@@ -155,6 +174,7 @@ async function lookup(ip: string) {
     }),
   );
   const data = { ip, primary: results.find((r) => r.ok) ?? null, sources: results };
+  if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
   cache.set(ip, { at: Date.now(), data });
   return data;
 }
@@ -338,12 +358,18 @@ const RESOLVERS = [
 ];
 
 // whoami.akamai.net answers with the address the resolver used, i.e. its exit IP.
+// IPv4-first: some hosts and resolvers only answer over a v6 path.
 async function dnsExit({ name, server }: (typeof RESOLVERS)[number]) {
   const resolver = new Resolver({ timeout: 4000, tries: 1 });
   if (server) resolver.setServers([server]);
   const started = performance.now();
   try {
-    const [exitIp] = await resolver.resolve4("whoami.akamai.net");
+    let exitIp: string;
+    try {
+      [exitIp] = await resolver.resolve4("whoami.akamai.net");
+    } catch {
+      [exitIp] = await resolver.resolve6("whoami.akamai.net");
+    }
     return { name, server, ok: true, ms: Math.round(performance.now() - started), exitIp };
   } catch {
     return { name, server, ok: false, ms: null, exitIp: null };
@@ -469,19 +495,29 @@ function sweepSnapshot() {
   };
 }
 
+// Attached to every response. The script hash matches the inline theme script
+// in public/index.html; bump it there together.
+const SECURITY_HEADERS = {
+  "content-security-policy":
+    "default-src 'self'; script-src 'self' 'sha256-hVsJGBC8YgkvmDOD7j0PHU9Nnr/0ZPpu1sPtHb1y4AE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
+  "cross-origin-opener-policy": "same-origin",
+};
+
 export function createServer(port = PORT) {
-  return Bun.serve({
-    port,
-    async fetch(req) {
-      const url = new URL(req.url);
+  const handle = async (req: Request, rateKey: string): Promise<Response> => {
+    const url = new URL(req.url);
 
-      if (url.pathname === "/api/client-ip") {
-        return Response.json({ ip: clientIp(req) });
-      }
+    if (url.pathname === "/api/client-ip") {
+      return Response.json({ ip: clientIp(req) });
+    }
 
-      if (url.pathname === "/api/targets") {
-        return Response.json(TARGETS, { headers: { "cache-control": "no-store" } });
-      }
+    if (url.pathname === "/api/targets") {
+      return Response.json(TARGETS, { headers: { "cache-control": "no-store" } });
+    }
 
       if (url.pathname === "/api/cdn") {
         return Response.json(await Promise.all(CDN_PROBES.map(probeCdn)));
@@ -554,10 +590,28 @@ export function createServer(port = PORT) {
       }
 
       if (url.pathname === "/api/lookup") {
+        if (!rateLimit(rateKey)) {
+          return Response.json({ error: "rate limited" }, { status: 429 });
+        }
         const ip = url.searchParams.get("ip")?.trim();
         if (!ip) return Response.json({ error: "ip is required" }, { status: 400 });
         if (!/^[0-9a-fA-F:.]{3,45}$/.test(ip)) return Response.json({ error: "malformed ip" }, { status: 400 });
         return Response.json(await lookup(ip));
+      }
+
+      if (url.pathname === "/api/sweep/export") {
+        const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+        const rows = ["cc,status,label"];
+        for (const [cc, bucket] of sweep?.countries ?? []) {
+          for (const label of bucket.labels) rows.push([cc, "ok", label].map(cell).join(","));
+          for (const label of bucket.failed) rows.push([cc, "fail", label].map(cell).join(","));
+        }
+        return new Response(rows.join("\n"), {
+          headers: {
+            "content-type": "text/csv; charset=utf-8",
+            "content-disposition": 'attachment; filename="sweep.csv"',
+          },
+        });
       }
 
       if (APP_ROUTES[url.pathname]) {
@@ -572,8 +626,18 @@ export function createServer(port = PORT) {
         return new Response(file, { headers: { "cache-control": "no-cache" } });
       }
       return new Response("not found", { status: 404 });
-    },
-  });
+    };
+    return Bun.serve({
+      port,
+      async fetch(req, server) {
+        // Socket address is the claim we cannot check; the proxy headers only
+        // matter when the server sits behind one.
+        const ip = server.requestIP(req)?.address ?? clientIp(req) ?? "unknown";
+        const res = await handle(req, ip);
+        for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.headers.set(name, value);
+        return res;
+      },
+    });
 }
 
 if (import.meta.main) {
