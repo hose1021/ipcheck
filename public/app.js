@@ -386,28 +386,46 @@ const statusBadge = (ok) =>
 
 const imageProbe = (url, timeout = 6000) =>
   new Promise((resolve) => {
+    const started = performance.now();
     const img = new Image();
-    const timer = setTimeout(() => resolve(false), timeout);
+    const finish = (ok) => resolve({ ok, ms: Math.round(performance.now() - started) });
+    const timer = setTimeout(() => finish(false), timeout);
     img.onload = () => {
       clearTimeout(timer);
-      resolve(true);
+      finish(true);
     };
     img.onerror = () => {
       clearTimeout(timer);
-      resolve(false);
+      finish(false);
     };
     img.src = `${new URL(url).origin}/favicon.ico?_=${Date.now()}${Math.random()}`;
   });
 
+let blockedSignals = 0;
+
+function noteBlocking() {
+  blockedSignals += 1;
+  if (blockedSignals < 3) return;
+  const note = document.getElementById("blocked-note");
+  if (note) note.hidden = false;
+}
+
 async function checkTarget(target, item) {
   const cell = item.querySelector(".ms");
-  // The icon first: content blockers and CORP reject far fewer image loads than fetches.
-  let reachable = await imageProbe(target.check ?? target.url);
-  for (let i = 0; i < 3 && !reachable; i++) reachable = (await probeOnce(target.url)) !== null;
+  // An instant rejection means the request never left the browser: a content blocker.
+  const icon = await imageProbe(target.check ?? target.url);
+  let reachable = icon.ok;
+  let instant = !icon.ok && icon.ms < 60;
+  if (!reachable) {
+    const started = performance.now();
+    for (let i = 0; i < 3 && !reachable; i++) reachable = (await probeOnce(target.url)) !== null;
+    if (!reachable && performance.now() - started < 90) instant = true;
+  }
   // Never ask the server: its route is not the visitor's. Unknown stays unknown.
   cell.innerHTML = statusBadge(reachable ? true : null);
   cell.dataset.state = reachable ? "l90" : "fail";
   cell.title = reachable ? "" : t(lang, "checkUnknown");
+  if (!reachable && instant) noteBlocking();
 }
 
 async function measureAll() {
