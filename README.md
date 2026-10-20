@@ -82,9 +82,9 @@ switches to static mode on its own:
   retried once. A host that sends `Cross-Origin-Resource-Policy: same-site`
   (apa.az) cannot be timed from a page, which is why the latency list holds
   turbo.az instead. Social, AI and gaming sites only need a yes/no answer: three
-  attempts and a check mark, with a server-side retry for hosts such as
-  instagram.com or chatgpt.com whose `CORP: same-origin` hides the response from
-  the page.
+  browser attempts, then a favicon load for hosts whose `CORP: same-origin`
+  hides the response. The server is never asked — its route is not the
+  visitor's — so a host that blocks both stays a grey dash.
 - `/split-tunnel` reports two things per site: the exit IP, taken from the
   site's own `/cdn-cgi/trace`, and reachability, from a plain request to the
   origin. Sites without that path (alibaba.com, 163.com, bytedance.com,
