@@ -17,7 +17,7 @@
   </head>
   <body>
     <header class="bar">
-      <a class="brand" href="#/">ipcheck</a>
+      <a class="brand" href="/" data-route>ipcheck</a>
       <nav class="langs" aria-label="Language">
         <button type="button" id="theme" class="theme">☾</button>
         <button type="button" data-lang="ru">RU</button>
@@ -26,10 +26,12 @@
     </header>
 
     <nav class="tabs" aria-label="Tools">
-      <a href="#/" data-i18n="navHome">Мой IP</a>
-      <a href="#/split-tunnel" data-i18n="navSplit">Сплит-туннель</a>
-      <a href="#/multi" data-i18n="navMulti">Мульти-выход</a>
-      <a href="#/stun" data-i18n="navStun">STUN</a>
+      <a href="/" data-route data-i18n="navHome">Мой IP</a>
+      <a href="/split-tunnel" data-route data-server data-i18n="navSplit">Сплит-туннель</a>
+      <a href="/multi" data-route data-server data-i18n="navMulti">Мульти-выход</a>
+      <a href="/cdn-node-lookup" data-route data-server data-i18n="navCdn">Узлы CDN</a>
+      <a href="/dns-exit-lookup" data-route data-server data-i18n="navDns">DNS-выход</a>
+      <a href="/stun" data-route data-i18n="navStun">STUN</a>
     </nav>
 
     <main>
@@ -106,10 +108,10 @@
             <table>
               <thead>
                 <tr>
-                  <th data-i18n="splitService">Сервис</th>
+                  <th data-i18n="site">Сайт</th>
                   <th data-i18n="ip">IP-адрес</th>
-                  <th data-i18n="country">Страна</th>
-                  <th data-i18n="city">Город</th>
+                  <th data-i18n="location">Геолокация</th>
+                  <th data-i18n="statusHead">Доступность</th>
                 </tr>
               </thead>
               <tbody id="split-body"></tbody>
@@ -124,9 +126,71 @@
           <h1 data-i18n="multiTitle">Мульти-выход</h1>
           <p data-i18n="multiHint"></p>
         </div>
+
         <div class="card">
-          <ul id="multi-list" class="tree"></ul>
-          <p><button type="button" id="multi-run" class="ghost" data-i18n="splitRun">Проверить снова</button></p>
+          <h2 data-i18n="sweepTitle">Проба</h2>
+          <div class="sweep-head">
+            <output id="sweep-progress" class="ip">0 / 0</output>
+            <span id="sweep-state" class="hint"></span>
+          </div>
+          <progress id="sweep-bar" max="1" value="0"></progress>
+          <p id="sweep-counts" class="hint"></p>
+          <button type="button" id="sweep-run" class="ghost" data-i18n="sweepRun">Запустить заново</button>
+        </div>
+
+        <div class="card">
+          <h2><span data-i18n="foundTitle">Найдено адресов</span> <span id="found-count" class="count"></span></h2>
+          <ul id="found-list" class="tree"></ul>
+        </div>
+
+        <div class="card">
+          <h2><span data-i18n="probesTitle">Пробы по странам</span> <span id="probe-count" class="count"></span></h2>
+          <ul id="probe-tree" class="tree"></ul>
+        </div>
+      </section>
+
+      <section data-view="cdn" hidden>
+        <div class="intro">
+          <h1 data-i18n="cdnTitle">Узлы CDN</h1>
+          <p data-i18n="cdnHint"></p>
+        </div>
+        <div class="card">
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="source">Источник</th>
+                  <th data-i18n="cdnNode">Узел</th>
+                  <th data-i18n="cdnStatus">Статус</th>
+                  <th data-i18n="time">Время</th>
+                </tr>
+              </thead>
+              <tbody id="cdn-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section data-view="dns" hidden>
+        <div class="intro">
+          <h1 data-i18n="dnsTitle">DNS-выход</h1>
+          <p data-i18n="dnsHint"></p>
+        </div>
+        <div class="card">
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="resolver">Резолвер</th>
+                  <th data-i18n="exitIp">IP выхода</th>
+                  <th data-i18n="country">Страна</th>
+                  <th data-i18n="city">Город</th>
+                  <th data-i18n="time">Время</th>
+                </tr>
+              </thead>
+              <tbody id="dns-body"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -155,7 +219,7 @@
 
     <footer>
       <span>ipcheck</span>
-      <span>ipwho.is · ipapi.is · ipinfo.io</span>
+      <span>ip-api.com · ipwho.is</span>
     </footer>
 
     <script type="module" src="./app.js"></script>
