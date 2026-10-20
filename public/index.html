@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ipcheck</title>
+    <script>
+      try {
+        const saved = localStorage.getItem("ipcheck-theme");
+        document.documentElement.dataset.theme =
+          saved === "dark" || (saved !== "light" && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+      } catch {
+        /* storage disabled; the light theme stays */
+      }
+    </script>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="brand" href="/" data-route>ipcheck</a>
+      <nav class="langs" aria-label="Language">
+        <button type="button" id="theme" class="theme">☾</button>
+        <button type="button" data-lang="ru">RU</button>
+        <button type="button" data-lang="az">AZ</button>
+      </nav>
+    </header>
+
+    <nav class="tabs" aria-label="Tools">
+      <a href="/" data-route data-i18n="navHome">Мой IP</a>
+      <a href="/split-tunnel" data-route data-server data-i18n="navSplit">Сплит-туннель</a>
+      <a href="/multi" data-route data-server data-i18n="navMulti">Мульти-выход</a>
+      <a href="/cdn-node-lookup" data-route data-server data-i18n="navCdn">Узлы CDN</a>
+      <a href="/dns-exit-lookup" data-route data-server data-i18n="navDns">DNS-выход</a>
+      <a href="/stun" data-route data-i18n="navStun">STUN</a>
+    </nav>
+
+    <main>
+      <section data-view="home">
+        <div class="intro">
+          <h1 data-i18n="title">Мой IP-адрес</h1>
+          <p data-i18n="subtitle"></p>
+        </div>
+
+        <div class="card">
+          <div class="ip-line">
+            <output id="ip" class="ip">…</output>
+            <button type="button" id="copy" class="ghost" data-i18n="copy">Копировать</button>
+          </div>
+          <dl id="facts" class="facts"></dl>
+          <form id="lookup" class="lookup" autocomplete="off">
+            <label for="q" data-i18n="queryTitle">Проверить другой IP</label>
+            <div class="row">
+              <input id="q" name="q" inputmode="decimal" spellcheck="false" placeholder="8.8.8.8" />
+              <button type="submit" data-i18n="check">Проверить</button>
+              <button type="button" id="reset" class="ghost" data-i18n="reset">Мой IP</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2 data-i18n="sourcesTitle">Сверка источников</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="source">Источник</th>
+                  <th data-i18n="country">Страна</th>
+                  <th data-i18n="city">Город</th>
+                  <th data-i18n="isp">Провайдер</th>
+                  <th data-i18n="asn">ASN</th>
+                </tr>
+              </thead>
+              <tbody id="sources"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 data-i18n="latencyTitle">Задержка до сервисов</h2>
+          <p class="hint" data-i18n="latencyHint"></p>
+          <ul class="legend">
+            <li><i data-state="l90"></i><span data-i18n="legend90">до 90 мс</span></li>
+            <li><i data-state="l150"></i><span data-i18n="legend150">до 150 мс</span></li>
+            <li><i data-state="l250"></i><span data-i18n="legend250">до 250 мс</span></li>
+            <li><i data-state="lomg"></i><span data-i18n="legendOmg">от 250 мс</span></li>
+            <li><i data-state="fail"></i><span data-i18n="legendFail">нет ответа</span></li>
+          </ul>
+          <h3 class="group" data-i18n="groupAz">Азербайджан</h3>
+          <ul id="latency-az" class="ping"></ul>
+          <h3 class="group" data-i18n="groupWorld">Мир</h3>
+          <ul id="latency-world" class="ping"></ul>
+          <h3 class="group" data-i18n="groupSocial">Соц сети</h3>
+          <ul id="latency-social" class="ping" data-cols="4"></ul>
+          <h3 class="group" data-i18n="groupAi">ИИ</h3>
+          <ul id="latency-ai" class="ping" data-cols="3"></ul>
+          <h3 class="group" data-i18n="groupGames">Игры</h3>
+          <ul id="latency-games" class="ping" data-cols="4"></ul>
+        </div>
+      </section>
+
+      <section data-view="split" hidden>
+        <div class="intro">
+          <h1 data-i18n="splitTitle">Сплит-туннель</h1>
+          <p data-i18n="splitHint"></p>
+        </div>
+        <div class="card">
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="site">Сайт</th>
+                  <th data-i18n="ip">IP-адрес</th>
+                  <th data-i18n="location">Геолокация</th>
+                  <th data-i18n="statusHead">Доступность</th>
+                </tr>
+              </thead>
+              <tbody id="split-body"></tbody>
+            </table>
+          </div>
+          <p><button type="button" id="split-run" class="ghost" data-i18n="splitRun">Проверить снова</button></p>
+        </div>
+      </section>
+
+      <section data-view="multi" hidden>
+        <div class="intro">
+          <h1 data-i18n="multiTitle">Мульти-выход</h1>
+          <p data-i18n="multiHint"></p>
+        </div>
+
+        <div class="card">
+          <h2 data-i18n="sweepTitle">Проба</h2>
+          <div class="sweep-head">
+            <output id="sweep-progress" class="ip">0 / 0</output>
+            <span id="sweep-state" class="hint"></span>
+          </div>
+          <progress id="sweep-bar" max="1" value="0"></progress>
+          <p id="sweep-counts" class="hint"></p>
+          <button type="button" id="sweep-run" class="ghost" data-i18n="sweepRun">Запустить заново</button>
+        </div>
+
+        <div class="card">
+          <h2><span data-i18n="foundTitle">Найдено адресов</span> <span id="found-count" class="count"></span></h2>
+          <ul id="found-list" class="tree"></ul>
+        </div>
+
+        <div class="card">
+          <h2><span data-i18n="probesTitle">Пробы по странам</span> <span id="probe-count" class="count"></span></h2>
+          <ul id="probe-tree" class="tree"></ul>
+        </div>
+      </section>
+
+      <section data-view="cdn" hidden>
+        <div class="intro">
+          <h1 data-i18n="cdnTitle">Узлы CDN</h1>
+          <p data-i18n="cdnHint"></p>
+        </div>
+        <div class="card">
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="source">Источник</th>
+                  <th data-i18n="cdnNode">Узел</th>
+                  <th data-i18n="cdnStatus">Статус</th>
+                  <th data-i18n="time">Время</th>
+                </tr>
+              </thead>
+              <tbody id="cdn-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section data-view="dns" hidden>
+        <div class="intro">
+          <h1 data-i18n="dnsTitle">DNS-выход</h1>
+          <p data-i18n="dnsHint"></p>
+        </div>
+        <div class="card">
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="resolver">Резолвер</th>
+                  <th data-i18n="exitIp">IP выхода</th>
+                  <th data-i18n="country">Страна</th>
+                  <th data-i18n="city">Город</th>
+                  <th data-i18n="time">Время</th>
+                </tr>
+              </thead>
+              <tbody id="dns-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section data-view="stun" hidden>
+        <div class="intro">
+          <h1 data-i18n="stunTitle">WebRTC (STUN)</h1>
+          <p data-i18n="stunHint"></p>
+        </div>
+        <div class="card">
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="stunServer">STUN-сервер</th>
+                  <th data-i18n="ip">IP-адрес</th>
+                  <th data-i18n="country">Страна</th>
+                  <th data-i18n="city">Город</th>
+                </tr>
+              </thead>
+              <tbody id="stun-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>ipcheck</span>
+      <span>ip-api.com · ipwho.is</span>
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

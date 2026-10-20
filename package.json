@@ -1,0 +1,10 @@
+{
+  "name": "ipcheck",
+  "private": true,
+  "scripts": {
+    "start": "bun run server.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}
