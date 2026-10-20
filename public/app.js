@@ -334,6 +334,8 @@ async function probeOnce(url) {
     await fetch(url, {
       mode: "no-cors",
       cache: "no-store",
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
       signal: AbortSignal.timeout(6000),
     });
     return Math.round(performance.now() - started);

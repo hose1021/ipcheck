@@ -11,7 +11,7 @@ export const TARGETS = [
   { group: "world", name: "cloudflare.com", url: "https://www.cloudflare.com/" },
   { group: "world", name: "github.com", url: "https://github.com/" },
   { group: "world", name: "telegram.org", url: "https://telegram.org/" },
-  { group: "world", name: "web.whatsapp.com", url: "https://web.whatsapp.com/" },
+  { group: "world", name: "whatsapp.com", url: "https://www.whatsapp.com/" },
   { group: "social", name: "www.instagram.com", url: "https://www.instagram.com/" },
   { group: "social", name: "www.facebook.com", url: "https://www.facebook.com/" },
   { group: "social", name: "www.tiktok.com", url: "https://www.tiktok.com/" },
