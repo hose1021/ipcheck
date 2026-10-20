@@ -1,5 +1,6 @@
 import { LANGS, t } from "./i18n.js";
 import { TARGETS } from "./targets.js";
+import { SPLIT_SITES } from "./split.js";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -612,8 +613,49 @@ function renderSplit(rows) {
   }).join("");
 }
 
+async function runSplitStatic() {
+  const body = $("#split-body");
+  body.innerHTML = `<tr><td colspan="4" class="${CELL}">${t(lang, "loading")}</td></tr>`;
+
+  const probe = async ({ group, name, url }) => {
+    try {
+      const res = await fetch(new URL("/cdn-cgi/trace", url), {
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000),
+      });
+      const exitIp = /^ip=(.+)$/m.exec(await res.text())?.[1]?.trim() ?? null;
+      if (exitIp) return { group, name, exitIp, reachable: true };
+    } catch {
+      /* no CORS on the trace endpoint; fall through to a plain check */
+    }
+    try {
+      await fetch(url, {
+        mode: "no-cors",
+        cache: "no-store",
+        credentials: "omit",
+        signal: AbortSignal.timeout(4000),
+      });
+      return { group, name, exitIp: null, reachable: true };
+    } catch {
+      return { group, name, exitIp: null, reachable: false };
+    }
+  };
+
+  const probes = await Promise.all(SPLIT_SITES.map(probe));
+  const geo = await Promise.all(probes.map((p) => (p.exitIp ? geoStatic(p.exitIp) : null)));
+  state.split = probes.map((p, i) => ({
+    ...p,
+    country: geo[i]?.country ?? null,
+    countryCode: geo[i]?.countryCode ?? null,
+    city: geo[i]?.city ?? null,
+  }));
+  await loadIcons();
+  renderSplit(state.split);
+}
+
 async function runSplit() {
-  $("#split-body").innerHTML = `<tr><td colspan="4">${t(lang, "loading")}</td></tr>`;
+  if (!HAS_API) return runSplitStatic();
+  $("#split-body").innerHTML = `<tr><td colspan="4" class="${CELL}">${t(lang, "loading")}</td></tr>`;
   try {
     const [rows] = await Promise.all([(await fetch("/api/split")).json(), loadIcons()]);
     state.split = rows;

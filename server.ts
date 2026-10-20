@@ -2,6 +2,7 @@
 import { Resolver } from "node:dns/promises";
 import { z } from "zod";
 import { TARGETS } from "./public/targets.js";
+import { SPLIT_SITES } from "./public/split.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const PUBLIC_DIR = new URL("./public/", import.meta.url);
@@ -252,54 +253,6 @@ async function echoProbe({ name, url, pattern }: (typeof ECHO_SERVICES)[number])
 
 // Every Cloudflare-fronted site answers /cdn-cgi/trace with the address it sees,
 // so one request per site shows which exit IP that site actually receives.
-const SPLIT_SITES = [
-  { group: "az", name: "oxu.az", url: "https://oxu.az/" },
-  { group: "az", name: "apa.az", url: "https://apa.az/" },
-  { group: "az", name: "trend.az", url: "https://www.trend.az/" },
-  { group: "az", name: "azercell.com", url: "https://azercell.com/az/" },
-  { group: "az", name: "bakcell.com", url: "https://www.bakcell.com/" },
-  { group: "az", name: "nar.az", url: "https://nar.az/" },
-  { group: "cn", name: "alibaba.com", url: "https://www.alibaba.com/" },
-  { group: "cn", name: "163.com (NetEase)", url: "https://www.163.com/" },
-  { group: "cn", name: "bytedance.com", url: "https://www.bytedance.com/" },
-  { group: "cn", name: "tencent.com", url: "https://www.tencent.com/" },
-  { group: "cn", name: "www.qualcomm.cn", url: "https://www.qualcomm.cn/" },
-  { group: "intl", name: "www.cloudflare.com", url: "https://www.cloudflare.com/" },
-  { group: "intl", name: "discord.com", url: "https://discord.com/" },
-  { group: "intl", name: "www.visa.com", url: "https://www.visa.com/" },
-  { group: "intl", name: "x.com", url: "https://x.com/" },
-  { group: "intl", name: "medium.com", url: "https://medium.com/" },
-  { group: "games", name: "store.steampowered.com", url: "https://store.steampowered.com/" },
-  { group: "games", name: "steamcommunity.com", url: "https://steamcommunity.com/" },
-  { group: "games", name: "www.epicgames.com", url: "https://www.epicgames.com/" },
-  { group: "games", name: "www.ea.com", url: "https://www.ea.com/" },
-  { group: "games", name: "battle.net", url: "https://battle.net/" },
-  { group: "games", name: "www.riotgames.com", url: "https://www.riotgames.com/" },
-  { group: "games", name: "www.gog.com", url: "https://www.gog.com/" },
-  { group: "games", name: "www.playstation.com", url: "https://www.playstation.com/" },
-  { group: "games", name: "www.xbox.com", url: "https://www.xbox.com/" },
-  { group: "games", name: "www.roblox.com", url: "https://www.roblox.com/" },
-  { group: "ai", name: "chatgpt.com", url: "https://chatgpt.com/" },
-  { group: "ai", name: "sora.com", url: "https://sora.com/" },
-  { group: "ai", name: "openai.com", url: "https://openai.com/" },
-  { group: "ai", name: "claude.ai", url: "https://claude.ai/" },
-  { group: "ai", name: "grok.com", url: "https://grok.com/" },
-  { group: "ai", name: "anthropic.com", url: "https://www.anthropic.com/" },
-  { group: "ai", name: "www.perplexity.ai", url: "https://www.perplexity.ai/" },
-  { group: "crypto", name: "coinbase.com", url: "https://www.coinbase.com/" },
-  { group: "crypto", name: "www.okx.com", url: "https://www.okx.com/" },
-  { group: "crypto", name: "binance.com", url: "https://www.binance.com/" },
-  { group: "static", name: "cdn.jsdelivr.net", url: "https://cdn.jsdelivr.net/" },
-  { group: "static", name: "cdnjs.cloudflare.com", url: "https://cdnjs.cloudflare.com/" },
-  { group: "static", name: "cloudflaremirrors.com", url: "https://cloudflaremirrors.com/" },
-  { group: "static", name: "registry.npmjs.org", url: "https://registry.npmjs.org/" },
-  { group: "static", name: "kali.download", url: "https://kali.download/" },
-  { group: "static", name: "unpkg.com", url: "https://unpkg.com/" },
-  { group: "other", name: "crunchyroll.com", url: "https://www.crunchyroll.com/" },
-  { group: "other", name: "nodejs.org", url: "https://nodejs.org/" },
-  { group: "other", name: "gitlab.com", url: "https://gitlab.com/" },
-  { group: "cn", name: "www.temu.com", url: "https://www.temu.com/" },
-];
 
 type SplitProbeResult = {
   group: string;
